@@ -3,6 +3,9 @@ package io.jmix.build
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.plugins.JavaBasePlugin
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.tasks.GenerateModuleMetadata
 import org.gradle.api.tasks.compile.JavaCompile
@@ -20,6 +23,7 @@ class JmixBuildPlugin implements Plugin<Project> {
         setupCompilation(project, extension)
         setupTestExecution(project)
         setupJavadocsBuilding(project)
+        setupAggregateJavadocsBuilding(project)
         setupPublishing(project)
         setupSpotbugs(project)
 
@@ -148,6 +152,53 @@ class JmixBuildPlugin implements Plugin<Project> {
         }
     }
 
+    private void setupAggregateJavadocsBuilding(Project project) {
+        Project rootProject = project.rootProject
+        if (rootProject) {
+            rootProject.gradle.projectsEvaluated {
+                Set<Task> existingTasks = rootProject.getTasksByName("aggregateJavadoc", false)
+                if (existingTasks.isEmpty()) {
+                    Set<Project> javaSubprojects = getJavaSubProjects(rootProject)
+                    if (!javaSubprojects.isEmpty()) {
+                        rootProject.task("aggregateJavadoc", type: Javadoc) {
+                            description = 'Aggregates Javadoc API documentation of all subprojects.'
+                            group = JavaBasePlugin.DOCUMENTATION_GROUP
+                            options.encoding = 'UTF-8'
+                            options.memberLevel = JavadocMemberLevel.PROTECTED
+                            options.addStringOption("sourcepath", "")
+
+                            dependsOn javaSubprojects.javadoc
+                            source javaSubprojects.javadoc.source
+
+                            destinationDir = rootProject.file("$rootProject.buildDir/docs/javadoc")
+                            classpath = rootProject.files(javaSubprojects.javadoc.classpath)
+
+                            title = "${rootProject.name.capitalize()} ${getApiVersion(rootProject)} API"
+
+                            if (rootProject.hasProperty('javadocPublishCmd')) {
+                                doLast {
+                                    rootProject.exec {
+                                        workingDir "$rootProject.buildDir/docs/javadoc"
+                                        commandLine 'sh', '-c', rootProject.javadocPublishCmd
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private String getApiVersion(Project rootProject) {
+        String[] parts = rootProject.version.split('\\.')
+        if (parts.length > 1) {
+            return parts[0] + '.' + parts[1]
+        } else {
+            return parts[0]
+        }
+    }
+
     private void setupSpotbugs(Project project) {
         project.with {
             if (rootProject.hasProperty('spotbugsEnabled')) {
@@ -209,5 +260,9 @@ class JmixBuildPlugin implements Plugin<Project> {
                 }
             }
         }
+    }
+
+    private Set<Project> getJavaSubProjects(Project rootProject) {
+        rootProject.subprojects.findAll { subproject -> subproject.plugins.hasPlugin(JavaPlugin) }
     }
 }
