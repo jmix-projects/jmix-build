@@ -25,6 +25,7 @@ class JmixBuildPlugin implements Plugin<Project> {
         setupJavadocsBuilding(project)
         setupAggregateJavadocsBuilding(project)
         setupPublishing(project)
+        setupDependencyManagement(project)
         setupSpotbugs(project)
     }
 
@@ -265,4 +266,16 @@ class JmixBuildPlugin implements Plugin<Project> {
     private Set<Project> getJavaSubProjects(Project rootProject) {
         rootProject.subprojects.findAll { subproject -> subproject.plugins.hasPlugin(JavaPlugin) }
     }
+
+    private void setupDependencyManagement(Project project) {
+        if (!project.name.startsWith('sample')) {
+            project.with {
+                dependencies {
+                    api platform("org.springframework.boot:spring-boot-starter-parent:2.5.2")
+                    api platform("io.jmix.bom:jmix-bom:$bomVersion")
+                }
+            }
+        }
+    }
+
 }
