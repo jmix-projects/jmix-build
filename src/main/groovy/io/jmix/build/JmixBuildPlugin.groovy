@@ -271,7 +271,6 @@ class JmixBuildPlugin implements Plugin<Project> {
         if (!project.name.startsWith('sample')) {
             project.with {
                 dependencies {
-                    api platform("org.springframework.boot:spring-boot-starter-parent:2.5.2")
                     api platform("io.jmix.bom:jmix-bom:$bomVersion")
                 }
             }
