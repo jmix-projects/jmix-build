@@ -268,11 +268,9 @@ class JmixBuildPlugin implements Plugin<Project> {
     }
 
     private void setupDependencyManagement(Project project) {
-        if (!project.name.startsWith('sample')) {
-            project.with {
-                dependencies {
-                    api platform("io.jmix.bom:jmix-bom:$bomVersion")
-                }
+        project.with {
+            dependencies {
+                api platform("io.jmix.bom:jmix-bom:$bomVersion")
             }
         }
     }
